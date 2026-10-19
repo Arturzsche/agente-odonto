@@ -16,6 +16,8 @@ src/
   services/calendarService.js    # MOCK + implementação real do Google Calendar
   tools/index.js                 # definições das tools e despacho para os handlers
 scripts/simular-webhook.js       # simula a Evolution localmente
+scripts/conectar-whatsapp.js     # cria a instância e mostra o QR Code
+docker-compose.yml               # Evolution API + PostgreSQL + Redis
 ```
 
 ## Como rodar
@@ -51,12 +53,21 @@ PHONE=5511988887777 node scripts/simular-webhook.js "Oi"   # outro paciente
 | `GOOGLE_APPLICATION_CREDENTIALS` | se real | JSON da Service Account |
 | `CLINIC_TIMEZONE`, `CLINIC_OPEN_HOUR`, `CLINIC_CLOSE_HOUR`, `APPOINTMENT_DURATION_MIN` | não | Expediente e duração da avaliação |
 
-## Conectando na Evolution API real
+## Conectando na Evolution API real (Docker)
 
-1. Preencha `EVOLUTION_API_URL`, `EVOLUTION_API_KEY` e `EVOLUTION_INSTANCE`.
-2. Na instância, configure o webhook para `http://SEU_HOST:3000/webhook` com o evento **MESSAGES_UPSERT**.
-   - Se a Evolution roda em Docker e o agente no host, use `http://host.docker.internal:3000/webhook`.
-   - Opcional: ligue **Webhook Base64** para o áudio já vir no payload (economiza uma requisição).
+O `docker-compose.yml` sobe a Evolution API v2.3.7 com PostgreSQL e Redis, já com o webhook global
+apontando para o agente (`http://host.docker.internal:PORT/webhook`, só o evento `MESSAGES_UPSERT`).
+
+1. No `.env`, preencha `EVOLUTION_API_URL=http://localhost:8080`, `EVOLUTION_API_KEY` e `EVOLUTION_DB_PASSWORD`
+   (só letras e números).
+2. `docker compose up -d` (primeira vez baixa as imagens; aguarde ~1 min).
+3. `npm start` (o agente precisa estar rodando para receber os webhooks).
+4. `npm run whatsapp:conectar`: cria a instância e abre o QR Code; escaneie em
+   *WhatsApp > Aparelhos conectados > Conectar um aparelho*.
+
+Painel da Evolution: http://localhost:8080/manager (login com a `EVOLUTION_API_KEY`).
+Se o Windows perguntar sobre o firewall ao rodar o Node, permita o acesso em redes privadas
+(é por onde o Docker entrega os webhooks).
 
 ## Ativando o Google Calendar real
 

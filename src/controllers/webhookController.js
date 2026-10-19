@@ -31,8 +31,12 @@ function parsePayload(body) {
   const data = Array.isArray(body?.data) ? body.data[0] : body?.data;
   const key = data?.key;
   if (!key?.remoteJid || key.fromMe) return null;
+
+  // Contatos com privacidade de número chegam como "@lid"; quando a Evolution conhece o
+  // número real, ele vem em remoteJidAlt.
+  const jid = key.remoteJid.endsWith('@lid') && key.remoteJidAlt ? key.remoteJidAlt : key.remoteJid;
   // Ignora grupos, status e newsletters.
-  if (!key.remoteJid.endsWith('@s.whatsapp.net')) return null;
+  if (!jid.endsWith('@s.whatsapp.net') && !jid.endsWith('@lid')) return null;
 
   const message = data.message || {};
   const messageType = data.messageType;
@@ -52,8 +56,9 @@ function parsePayload(body) {
   return {
     data,
     messageId: key.id,
-    remoteJid: key.remoteJid,
-    phone: key.remoteJid.split('@')[0],
+    remoteJid: jid,
+    // Sem número real (@lid), a Evolution aceita o JID completo como destino.
+    phone: jid.endsWith('@lid') ? jid : jid.split('@')[0],
     pushName: data.pushName,
     type,
     text: text?.trim() || null,

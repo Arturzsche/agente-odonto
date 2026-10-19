@@ -11,3 +11,7 @@ credentials/
 
 # Banco de dados local
 data/*.sqlite*
+
+# Arquivos gerados localmente
+screenshots/
+qrcode.png
