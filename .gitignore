@@ -1,0 +1,13 @@
+# Dependências
+node_modules/
+
+# Segredos e variáveis de ambiente (NUNCA versionar)
+.env
+.env.*
+!.env.example
+
+# Credenciais do Google
+credentials/
+
+# Banco de dados local
+data/*.sqlite*

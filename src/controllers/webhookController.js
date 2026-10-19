@@ -1,0 +1,154 @@
+const db = require('../database');
+const openaiService = require('../services/openaiService');
+const evolutionService = require('../services/evolutionService');
+const logger = require('../utils/logger');
+
+const FALLBACK_REPLY =
+  'Desculpe, tive uma instabilidade aqui 😕. Pode me enviar sua mensagem novamente em instantes?';
+const AUDIO_FAIL_REPLY =
+  'Não consegui ouvir seu áudio 😕. Pode me contar por texto, por favor?';
+const UNSUPPORTED_REPLY =
+  'No momento consigo entender apenas mensagens de texto e áudio 🙂. Como posso te ajudar?';
+
+// Fila por paciente: mensagens do mesmo número são processadas em ordem, uma de cada vez,
+// evitando respostas fora de ordem quando o paciente manda várias mensagens seguidas.
+const queues = new Map();
+function enqueue(remoteJid, task) {
+  const previous = queues.get(remoteJid) || Promise.resolve();
+  const current = previous.then(task, task);
+  queues.set(remoteJid, current);
+  current.finally(() => {
+    if (queues.get(remoteJid) === current) queues.delete(remoteJid);
+  });
+  return current;
+}
+
+/** Extrai do payload da Evolution apenas o que interessa. Retorna null se for para ignorar. */
+function parsePayload(body) {
+  const event = String(body?.event || '').toLowerCase().replace('_', '.');
+  if (event && event !== 'messages.upsert') return null;
+
+  const data = Array.isArray(body?.data) ? body.data[0] : body?.data;
+  const key = data?.key;
+  if (!key?.remoteJid || key.fromMe) return null;
+  // Ignora grupos, status e newsletters.
+  if (!key.remoteJid.endsWith('@s.whatsapp.net')) return null;
+
+  const message = data.message || {};
+  const messageType = data.messageType;
+  let type = 'unsupported';
+  let text = null;
+
+  if (messageType === 'conversation' || message.conversation) {
+    type = 'text';
+    text = message.conversation;
+  } else if (messageType === 'extendedTextMessage' || message.extendedTextMessage) {
+    type = 'text';
+    text = message.extendedTextMessage?.text;
+  } else if (messageType === 'ptt' || messageType === 'audioMessage' || message.audioMessage) {
+    type = 'audio';
+  }
+
+  return {
+    data,
+    messageId: key.id,
+    remoteJid: key.remoteJid,
+    phone: key.remoteJid.split('@')[0],
+    pushName: data.pushName,
+    type,
+    text: text?.trim() || null,
+  };
+}
+
+/** Pipeline completo de uma mensagem. Nunca lança: erros viram mensagem de fallback. */
+async function processMessage(msg) {
+  const { remoteJid, phone, type } = msg;
+
+  const isNew = await db.markEventProcessed(msg.messageId);
+  if (!isNew) {
+    logger.info(`[webhook] Mensagem ${msg.messageId} duplicada, ignorando.`);
+    return null;
+  }
+
+  // 1) Obter o texto (transcrevendo se for áudio)
+  let userText = msg.text;
+  if (type === 'audio') {
+    try {
+      const { buffer, mimetype } = await evolutionService.downloadMedia(msg.data);
+      userText = await openaiService.transcribeAudio(buffer, mimetype);
+      logger.info(`[webhook] Áudio de ${phone} transcrito: "${userText}"`);
+    } catch (err) {
+      logger.error(`[webhook] Falha ao transcrever áudio de ${phone}:`, err.message);
+      await safeSend(phone, AUDIO_FAIL_REPLY);
+      return AUDIO_FAIL_REPLY;
+    }
+  }
+
+  if (type === 'unsupported' || !userText) {
+    await safeSend(phone, UNSUPPORTED_REPLY);
+    return UNSUPPORTED_REPLY;
+  }
+
+  logger.info(`[webhook] ${msg.pushName || phone} (${type}): ${userText}`);
+
+  // 2) Salvar mensagem do usuário e 3) puxar histórico
+  await db.saveMessage(remoteJid, 'user', userText, type);
+  const history = await db.getHistory(remoteJid);
+
+  // 4) IA + function calling
+  let reply;
+  try {
+    reply = await openaiService.generateReply(history, { remoteJid, phone, pushName: msg.pushName });
+  } catch (err) {
+    logger.error(`[webhook] Falha na OpenAI para ${phone}:`, err.message);
+    await safeSend(phone, FALLBACK_REPLY);
+    return FALLBACK_REPLY;
+  }
+  if (!reply) reply = FALLBACK_REPLY;
+
+  // 5) Salvar resposta e enviar ao paciente
+  await db.saveMessage(remoteJid, 'assistant', reply);
+  await safeSend(phone, reply);
+  return reply;
+}
+
+async function safeSend(phone, text) {
+  try {
+    await evolutionService.sendText(phone, text);
+  } catch (err) {
+    const detail = err.response ? `${err.response.status} ${JSON.stringify(err.response.data)}` : err.message;
+    logger.error(`[webhook] Falha ao enviar mensagem para ${phone}: ${detail}`);
+  }
+}
+
+/**
+ * POST /webhook
+ * Responde 200 imediatamente (a Evolution reenvia webhooks lentos) e processa em segundo plano.
+ * Use ?sync=1 em testes locais para aguardar e receber a resposta da IA no corpo.
+ */
+async function handleWebhook(req, res) {
+  let msg;
+  try {
+    msg = parsePayload(req.body);
+  } catch (err) {
+    logger.error('[webhook] Payload inválido:', err.message);
+    return res.status(400).json({ ok: false, error: 'Payload inválido' });
+  }
+
+  if (!msg) return res.status(200).json({ ok: true, ignored: true });
+
+  const job = enqueue(msg.remoteJid, () =>
+    processMessage(msg).catch((err) => {
+      logger.error(`[webhook] Erro inesperado ao processar ${msg.messageId}:`, err);
+      return null;
+    }),
+  );
+
+  if (req.query.sync === '1') {
+    const reply = await job;
+    return res.status(200).json({ ok: true, reply });
+  }
+  return res.status(200).json({ ok: true, queued: true });
+}
+
+module.exports = { handleWebhook, parsePayload };

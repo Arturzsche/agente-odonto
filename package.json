@@ -1,0 +1,24 @@
+{
+  "name": "agente-odonto-whatsapp",
+  "version": "1.0.0",
+  "description": "MVP de Agente de IA autônomo para WhatsApp (Clínica Odontológica Sorriso Ideal) - Evolution API + OpenAI + SQLite + Google Calendar",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test:texto": "node scripts/simular-webhook.js \"Oi, estou com muita dor no dente e o rosto inchado\"",
+    "test:agendar": "node scripts/simular-webhook.js \"Quero marcar uma avaliação para amanhã\""
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "axios": "^1.7.7",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "googleapis": "^144.0.0",
+    "openai": "^4.67.3",
+    "sqlite3": "^5.1.7"
+  }
+}
