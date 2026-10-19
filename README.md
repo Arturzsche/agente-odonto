@@ -1,6 +1,6 @@
 # Agente IA WhatsApp — Clínica Sorriso Ideal (MVP)
 
-Evolution API → `POST /webhook` → (Whisper se áudio) → SQLite → gpt-4o-mini + Function Calling → Google Calendar (mock) → Evolution `sendText`.
+Evolution API → `POST /webhook` → (Whisper se áudio) → PostgreSQL (Prisma) → gpt-4o-mini + Function Calling → Google Calendar (mock) → Evolution `sendText`.
 
 ## Estrutura
 
@@ -10,7 +10,13 @@ src/
   config/index.js                # leitura do .env
   routes/index.js                # /health, /webhook, /webhook/:event
   controllers/webhookController.js  # pipeline completo, fila por paciente, deduplicação
-  database/index.js              # SQLite (tabelas messages e processed_events)
+  database/prisma.js             # PrismaClient único
+  database/index.js              # conexão + funções de persistência usadas pelo app
+  database/repositories/         # users, sessions, messages, appointments, processed_events
+  services/appointmentService.js # disponibilidade/agendamento com trava contra horário duplicado
+prisma/schema.prisma             # models User, ChatSession, Message, Appointment, ProcessedEvent
+prisma/migrations/               # SQL versionado (aplicado com npm run db:migrate)
+scripts/migrar-sqlite-para-postgres.js  # importa o histórico do SQLite antigo
   services/openaiService.js      # system prompt, loop de function calling, Whisper
   services/evolutionService.js   # download de mídia e envio de texto (ou simulação)
   services/calendarService.js    # MOCK + implementação real do Google Calendar
@@ -23,10 +29,22 @@ docker-compose.yml               # Evolution API + PostgreSQL + Redis
 ## Como rodar
 
 ```bash
-npm install
-cp .env.example .env      # preencha pelo menos OPENAI_API_KEY
+npm install               # também gera o Prisma Client
+cp .env.example .env      # preencha OPENAI_API_KEY, senhas e DATABASE_URL
+docker compose up -d      # PostgreSQL + Redis + Evolution
+npm run db:migrate        # cria o banco agente_odonto e as tabelas
 npm run dev               # ou: npm start
 ```
+
+Comandos do banco:
+
+| Comando | O que faz |
+|---|---|
+| `npm run db:migrate` | Aplica as migrações pendentes (seguro, não apaga dados) |
+| `npm run db:status` | Mostra se há migrações pendentes |
+| `npm run db:studio` | Abre o Prisma Studio no navegador para ver/editar os dados |
+| `npm run db:migrate:dev -- --name descricao` | **Só em desenvolvimento**: cria uma nova migração após alterar o `schema.prisma` |
+| `npm run db:importar-sqlite` | Importa o histórico do `data/database.sqlite` antigo (pode rodar mais de uma vez) |
 
 Teste sem WhatsApp (com `EVOLUTION_API_URL` vazio, a resposta aparece no terminal e no log):
 
@@ -46,8 +64,9 @@ PHONE=5511988887777 node scripts/simular-webhook.js "Oi"   # outro paciente
 | `EVOLUTION_API_URL` | p/ produção | Ex.: `http://localhost:8080`. **Vazio = modo simulação** |
 | `EVOLUTION_API_KEY` | p/ produção | Header `apikey` da Evolution |
 | `EVOLUTION_INSTANCE` | p/ produção | Nome da instância (ex.: `clinica`) |
-| `SQLITE_PATH` | não | Padrão `./data/database.sqlite` |
-| `HISTORY_LIMIT` | não (10) | Mensagens de contexto enviadas à IA |
+| `DATABASE_URL` | **sim** | `postgresql://evolution:SENHA@localhost:5432/agente_odonto?schema=public` (SENHA = `EVOLUTION_DB_PASSWORD`) |
+| `HISTORY_LIMIT` | não (10) | Mensagens de contexto (da sessão atual) enviadas à IA |
+| `SESSION_TIMEOUT_HOURS` | não (12) | Horas sem mensagens até a conversa virar um novo atendimento |
 | `GOOGLE_CALENDAR_ENABLED` | não (`false`) | `true` usa o Google real; `false` usa o mock |
 | `GOOGLE_CALENDAR_ID` | se real | ID da agenda (ex.: `xxx@group.calendar.google.com`) |
 | `GOOGLE_APPLICATION_CREDENTIALS` | se real | JSON da Service Account |

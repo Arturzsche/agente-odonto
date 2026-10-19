@@ -96,14 +96,29 @@ async function processMessage(msg) {
 
   logger.info(`[webhook] ${msg.pushName || phone} (${type}): ${userText}`);
 
-  // 2) Salvar mensagem do usuário e 3) puxar histórico
-  await db.saveMessage(remoteJid, 'user', userText, type);
-  const history = await db.getHistory(remoteJid);
+  // 2) Identificar paciente e atendimento, salvar a mensagem e 3) puxar o histórico da sessão
+  const user = await db.upsertUser({ remoteJid, phone, name: msg.pushName });
+  const session = await db.getOrCreateActiveSession(user.id);
+  await db.saveMessage({
+    sessionId: session.id,
+    userId: user.id,
+    role: 'USER',
+    type: type === 'audio' ? 'AUDIO' : 'TEXT',
+    content: userText,
+    externalId: msg.messageId,
+  });
+  const history = await db.getHistory(session.id);
 
   // 4) IA + function calling
   let reply;
   try {
-    reply = await openaiService.generateReply(history, { remoteJid, phone, pushName: msg.pushName });
+    reply = await openaiService.generateReply(history, {
+      remoteJid,
+      phone,
+      pushName: msg.pushName,
+      userId: user.id,
+      sessionId: session.id,
+    });
   } catch (err) {
     logger.error(`[webhook] Falha na OpenAI para ${phone}:`, err.message);
     await safeSend(phone, FALLBACK_REPLY);
@@ -111,18 +126,26 @@ async function processMessage(msg) {
   }
   if (!reply) reply = FALLBACK_REPLY;
 
-  // 5) Salvar resposta e enviar ao paciente
-  await db.saveMessage(remoteJid, 'assistant', reply);
-  await safeSend(phone, reply);
+  // 5) Enviar ao paciente e salvar a resposta (com o ID que o WhatsApp deu à mensagem enviada)
+  const sent = await safeSend(phone, reply);
+  await db.saveMessage({
+    sessionId: session.id,
+    userId: user.id,
+    role: 'ASSISTANT',
+    content: reply,
+    externalId: sent?.key?.id || null,
+  });
   return reply;
 }
 
+/** Envia texto sem lançar erro. Retorna a resposta da Evolution, ou null se falhar. */
 async function safeSend(phone, text) {
   try {
-    await evolutionService.sendText(phone, text);
+    return await evolutionService.sendText(phone, text);
   } catch (err) {
     const detail = err.response ? `${err.response.status} ${JSON.stringify(err.response.data)}` : err.message;
     logger.error(`[webhook] Falha ao enviar mensagem para ${phone}: ${detail}`);
+    return null;
   }
 }
 
@@ -143,9 +166,11 @@ async function handleWebhook(req, res) {
   if (!msg) return res.status(200).json({ ok: true, ignored: true });
 
   const job = enqueue(msg.remoteJid, () =>
-    processMessage(msg).catch((err) => {
+    processMessage(msg).catch(async (err) => {
+      // Ex.: PostgreSQL fora do ar. O paciente não fica sem resposta.
       logger.error(`[webhook] Erro inesperado ao processar ${msg.messageId}:`, err);
-      return null;
+      await safeSend(msg.phone, FALLBACK_REPLY);
+      return FALLBACK_REPLY;
     }),
   );
 

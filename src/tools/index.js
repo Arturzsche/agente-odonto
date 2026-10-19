@@ -1,4 +1,4 @@
-const calendarService = require('../services/calendarService');
+const appointmentService = require('../services/appointmentService');
 
 /** Definições enviadas à OpenAI no parâmetro `tools`. */
 const toolDefinitions = [
@@ -33,6 +33,10 @@ const toolDefinitions = [
           nome_paciente: { type: 'string', description: 'Nome completo do paciente.' },
           data_horario: { type: 'string', description: 'Data e hora no formato "YYYY-MM-DD HH:mm".' },
           motivo: { type: 'string', description: 'Motivo da consulta (ex.: dor de dente, limpeza, EMERGÊNCIA - dente quebrado).' },
+          emergencia: {
+            type: 'boolean',
+            description: 'true se o paciente relatou dor aguda, inchaço, sangramento ou dente quebrado.',
+          },
         },
         required: ['nome_paciente', 'data_horario', 'motivo'],
         additionalProperties: false,
@@ -52,10 +56,9 @@ const toolDefinitions = [
 /** Implementações locais de cada tool. `ctx` traz dados da conversa (ex.: remoteJid). */
 const handlers = {
   consultar_disponibilidade_agenda: ({ data_desejada }) =>
-    calendarService.consultarDisponibilidade(data_desejada),
+    appointmentService.consultarDisponibilidade(data_desejada),
 
-  agendar_consulta: (args, ctx) =>
-    calendarService.agendarConsulta({ ...args, telefone: ctx.phone }),
+  agendar_consulta: (args, ctx) => appointmentService.agendarConsulta(args, ctx),
 
   consultar_valor_avaliacao: () => '150.00',
 };

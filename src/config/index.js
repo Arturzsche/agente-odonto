@@ -22,8 +22,11 @@ const config = {
   },
 
   db: {
-    path: process.env.SQLITE_PATH || './data/database.sqlite',
+    // Lida diretamente pelo Prisma (prisma/schema.prisma); aqui só para validar na inicialização.
+    url: process.env.DATABASE_URL,
     historyLimit: toInt(process.env.HISTORY_LIMIT, 10),
+    // Sem mensagens por este período, a conversa vira um novo atendimento (contexto limpo).
+    sessionTimeoutHours: toInt(process.env.SESSION_TIMEOUT_HOURS, 12),
   },
 
   calendar: {
@@ -37,6 +40,9 @@ const config = {
   },
 };
 
+if (!config.db.url) {
+  console.warn('[config] DATABASE_URL não definida: o servidor não vai conseguir iniciar.');
+}
 if (!config.openai.apiKey) {
   console.warn('[config] OPENAI_API_KEY não definida: as chamadas à OpenAI vão falhar.');
 }

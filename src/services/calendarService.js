@@ -57,7 +57,7 @@ const mock = {
   async agendarConsulta({ nome_paciente, data_horario, motivo, telefone }) {
     return {
       sucesso: true,
-      id_agendamento: `MOCK-${Date.now()}`,
+      calendarEventId: null,
       nome_paciente,
       data_horario,
       motivo,
@@ -134,7 +134,7 @@ const googleCalendar = {
 
     return {
       sucesso: true,
-      id_agendamento: data.id,
+      calendarEventId: data.id,
       nome_paciente,
       data_horario,
       motivo,
@@ -171,4 +171,4 @@ async function agendarConsulta({ nome_paciente, data_horario, motivo, telefone }
 
 logger.info(`[calendar] Modo: ${config.calendar.enabled ? 'Google Calendar real' : 'MOCK'}`);
 
-module.exports = { consultarDisponibilidade, agendarConsulta, todayInClinicTz };
+module.exports = { consultarDisponibilidade, agendarConsulta, todayInClinicTz, toClinicIso };

@@ -1,0 +1,155 @@
+// Banco do agente odontológico (PostgreSQL via Prisma).
+//
+// Usa o MESMO servidor PostgreSQL da Evolution API (container "postgres" do docker-compose),
+// mas num banco separado ("agente_odonto"), para que as migrações do agente nunca toquem
+// nas tabelas da Evolution. O Prisma cria esse banco sozinho no primeiro "migrate".
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Pacientes
+// ---------------------------------------------------------------------------
+
+/// Paciente que conversa com a clínica pelo WhatsApp (um registro por número).
+model User {
+  id           String        @id @default(uuid()) @db.Uuid
+  /// JID do WhatsApp, ex.: 5511999999999@s.whatsapp.net (ou ...@lid quando o número é oculto).
+  remoteJid    String        @unique @map("remote_jid")
+  /// Número usado para responder pela Evolution (sem o sufixo @s.whatsapp.net).
+  phone        String
+  /// Nome do perfil do WhatsApp (pushName), atualizado a cada mensagem.
+  name         String?
+  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  sessions     ChatSession[]
+  messages     Message[]
+  appointments Appointment[]
+
+  @@index([phone])
+  @@map("users")
+}
+
+// ---------------------------------------------------------------------------
+// Conversas
+// ---------------------------------------------------------------------------
+
+enum SessionStatus {
+  ACTIVE
+  CLOSED
+
+  @@map("session_status")
+}
+
+/// Um "atendimento": agrupa as mensagens de uma conversa. Depois de um período sem mensagens
+/// (SESSION_TIMEOUT_HOURS) a sessão é encerrada e a próxima mensagem abre uma nova, para a IA
+/// não misturar o contexto de atendimentos de dias diferentes.
+model ChatSession {
+  id            String        @id @default(uuid()) @db.Uuid
+  userId        String        @map("user_id") @db.Uuid
+  status        SessionStatus @default(ACTIVE)
+  startedAt     DateTime      @default(now()) @map("started_at") @db.Timestamptz(3)
+  lastMessageAt DateTime      @default(now()) @map("last_message_at") @db.Timestamptz(3)
+  endedAt       DateTime?     @map("ended_at") @db.Timestamptz(3)
+
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages      Message[]
+  appointments  Appointment[]
+
+  @@index([userId, status])
+  @@map("chat_sessions")
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+
+  @@map("message_role")
+}
+
+enum MessageType {
+  TEXT
+  AUDIO
+
+  @@map("message_type")
+}
+
+/// Mensagem trocada na conversa (do paciente ou da IA). Para áudios, `content` guarda a transcrição.
+model Message {
+  id         String      @id @default(uuid()) @db.Uuid
+  sessionId  String      @map("session_id") @db.Uuid
+  userId     String      @map("user_id") @db.Uuid
+  role       MessageRole
+  type       MessageType @default(TEXT)
+  content    String
+  /// ID da mensagem no WhatsApp (key.id), quando existir.
+  externalId String?     @unique @map("external_id")
+  createdAt  DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  session    ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+  @@index([userId, createdAt])
+  @@map("messages")
+}
+
+// ---------------------------------------------------------------------------
+// Agenda
+// ---------------------------------------------------------------------------
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  CANCELED
+  COMPLETED
+  NO_SHOW
+
+  @@map("appointment_status")
+}
+
+/// Consulta marcada pelo agente (espelha o evento do Google Calendar quando ele está ativo).
+model Appointment {
+  id              String            @id @default(uuid()) @db.Uuid
+  userId          String            @map("user_id") @db.Uuid
+  /// Sessão em que o agendamento foi feito (fica nulo se a sessão for apagada).
+  sessionId       String?           @map("session_id") @db.Uuid
+  patientName     String            @map("patient_name")
+  scheduledAt     DateTime          @map("scheduled_at") @db.Timestamptz(3)
+  durationMinutes Int               @default(60) @map("duration_minutes")
+  reason          String
+  isEmergency     Boolean           @default(false) @map("is_emergency")
+  status          AppointmentStatus @default(SCHEDULED)
+  /// ID do evento no Google Calendar (nulo no modo mock).
+  calendarEventId String?           @unique @map("calendar_event_id")
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session         ChatSession?      @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([scheduledAt, status])
+  @@index([userId, scheduledAt])
+  @@map("appointments")
+}
+
+// ---------------------------------------------------------------------------
+// Infraestrutura
+// ---------------------------------------------------------------------------
+
+/// IDs de webhooks já processados. A Evolution pode reenviar o mesmo evento; isto garante que
+/// cada mensagem do WhatsApp é respondida uma única vez, mesmo após reiniciar o servidor.
+model ProcessedEvent {
+  id        String   @id
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([createdAt])
+  @@map("processed_events")
+}

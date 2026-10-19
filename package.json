@@ -1,12 +1,18 @@
 {
   "name": "agente-odonto-whatsapp",
   "version": "1.0.0",
-  "description": "MVP de Agente de IA autônomo para WhatsApp (Clínica Odontológica Sorriso Ideal) - Evolution API + OpenAI + SQLite + Google Calendar",
+  "description": "MVP de Agente de IA autônomo para WhatsApp (Clínica Odontológica Sorriso Ideal) - Evolution API + OpenAI + PostgreSQL/Prisma + Google Calendar",
   "main": "src/server.js",
   "type": "commonjs",
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
+    "postinstall": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:migrate:dev": "prisma migrate dev",
+    "db:status": "prisma migrate status",
+    "db:studio": "prisma studio",
+    "db:importar-sqlite": "node scripts/migrar-sqlite-para-postgres.js",
     "whatsapp:conectar": "node scripts/conectar-whatsapp.js",
     "test:texto": "node scripts/simular-webhook.js \"Oi, estou com muita dor no dente e o rosto inchado\"",
     "test:agendar": "node scripts/simular-webhook.js \"Quero marcar uma avaliação para amanhã\""
@@ -15,11 +21,15 @@
     "node": ">=18"
   },
   "dependencies": {
+    "@prisma/client": "^6.19.3",
     "axios": "^1.7.7",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
     "googleapis": "^144.0.0",
     "openai": "^4.67.3",
+    "prisma": "^6.19.3"
+  },
+  "devDependencies": {
     "sqlite3": "^5.1.7"
   }
 }
