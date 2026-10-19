@@ -17,7 +17,8 @@ src/
 prisma/schema.prisma             # models User, ChatSession, Message, Appointment, ProcessedEvent
 prisma/migrations/               # SQL versionado (aplicado com npm run db:migrate)
 scripts/migrar-sqlite-para-postgres.js  # importa o histórico do SQLite antigo
-  services/openaiService.js      # system prompt, loop de function calling, Whisper
+  prompts/systemPrompt.js        # personalidade e regras da recepcionista (edite aqui o tom)
+  services/openaiService.js      # ciclo de function calling (com proteção contra "um momento"), Whisper
   services/evolutionService.js   # download de mídia e envio de texto (ou simulação)
   services/calendarService.js    # MOCK + implementação real do Google Calendar
   tools/index.js                 # definições das tools e despacho para os handlers

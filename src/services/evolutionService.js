@@ -61,4 +61,23 @@ async function sendText(number, text) {
   return data;
 }
 
-module.exports = { downloadMedia, sendText, simulationMode };
+/**
+ * Mostra "digitando..." para o paciente enquanto a IA e as ferramentas trabalham.
+ * Retorna uma função para parar. Nunca lança erro: é só um detalhe visual.
+ */
+function startTyping(number) {
+  if (simulationMode) return () => {};
+
+  const PRESENCE_MS = 8000;
+  const ping = () =>
+    http
+      .post(`/chat/sendPresence/${instance}`, { number, presence: 'composing', delay: PRESENCE_MS }, { timeout: PRESENCE_MS + 5000 })
+      .catch((err) => logger.warn(`[evolution] Falha ao enviar "digitando" para ${number}: ${err.message}`));
+
+  ping();
+  // O status "digitando" expira sozinho; renova enquanto o processamento durar.
+  const timer = setInterval(ping, PRESENCE_MS);
+  return () => clearInterval(timer);
+}
+
+module.exports = { downloadMedia, sendText, startTyping, simulationMode };

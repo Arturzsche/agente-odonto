@@ -109,7 +109,9 @@ async function processMessage(msg) {
   });
   const history = await db.getHistory(session.id);
 
-  // 4) IA + function calling
+  // 4) IA + function calling: aguarda TODAS as ferramentas e só então envia uma única resposta.
+  //    Enquanto isso, o paciente vê "digitando...".
+  const stopTyping = evolutionService.startTyping(phone);
   let reply;
   try {
     reply = await openaiService.generateReply(history, {
@@ -123,6 +125,8 @@ async function processMessage(msg) {
     logger.error(`[webhook] Falha na OpenAI para ${phone}:`, err.message);
     await safeSend(phone, FALLBACK_REPLY);
     return FALLBACK_REPLY;
+  } finally {
+    stopTyping();
   }
   if (!reply) reply = FALLBACK_REPLY;
 
