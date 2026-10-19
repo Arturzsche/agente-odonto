@@ -19,7 +19,10 @@ async function initDatabase() {
     if (isMissingTable(err)) {
       throw new Error('Tabelas não encontradas. Rode "npm run db:migrate" antes de iniciar o servidor.');
     }
-    throw new Error(`Não foi possível conectar ao PostgreSQL (DATABASE_URL): ${err.message}`);
+    throw new Error(
+      `Não foi possível conectar ao PostgreSQL (DATABASE_URL): ${err.message}\n` +
+        'Para descobrir e corrigir a causa, rode: npm run db:diagnostico -- --corrigir',
+    );
   }
 
   const prune = () =>

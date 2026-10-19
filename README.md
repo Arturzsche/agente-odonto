@@ -44,6 +44,7 @@ Comandos do banco:
 | `npm run db:status` | Mostra se há migrações pendentes |
 | `npm run db:studio` | Abre o Prisma Studio no navegador para ver/editar os dados |
 | `npm run db:migrate:dev -- --name descricao` | **Só em desenvolvimento**: cria uma nova migração após alterar o `schema.prisma` |
+| `npm run db:diagnostico -- --corrigir` | Descobre por que o login no PostgreSQL falha (P1000) e corrige o `.env` com as credenciais reais |
 | `npm run db:importar-sqlite` | Importa o histórico do `data/database.sqlite` antigo (pode rodar mais de uma vez) |
 
 Teste sem WhatsApp (com `EVOLUTION_API_URL` vazio, a resposta aparece no terminal e no log):

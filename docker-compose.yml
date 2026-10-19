@@ -95,8 +95,9 @@ services:
       POSTGRES_USER: evolution
       POSTGRES_PASSWORD: ${EVOLUTION_DB_PASSWORD:?Defina EVOLUTION_DB_PASSWORD no .env}
     ports:
-      # Exposto só para a própria máquina: o agente (Prisma) conecta por localhost:5432.
-      - "127.0.0.1:5432:5432"
+      # Exposto só para a própria máquina: o agente (Prisma) conecta por 127.0.0.1:5432.
+      # Se já existir um PostgreSQL instalado no Windows na 5432, use POSTGRES_HOST_PORT=5433 no .env.
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
       - evolution_postgres:/var/lib/postgresql/data
     healthcheck:
