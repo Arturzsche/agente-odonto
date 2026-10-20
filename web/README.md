@@ -45,6 +45,7 @@ src/
     not-found.tsx
     layout.tsx, globals.css  # Layout raiz e estilos globais
   components/
+    ui/                      # Design System (ver docs/design-system.md)
     shared/                  # Componentes usados pelo site e pelo painel
     dashboard/               # Componentes do painel
   config/                    # Configuração do produto (nome, mapa de rotas)
@@ -54,7 +55,6 @@ src/
 
 Pastas previstas, criadas quando houver conteúdo real:
 
-- `src/components/ui/` — componentes base do sistema de design (etapa de identidade visual)
 - `src/components/site/` — seções da landing page
 - `src/services/` — acesso a dados (fonte demonstrativa isolada e, depois, a API real do agente)
 
@@ -64,6 +64,7 @@ Pastas previstas, criadas quando houver conteúdo real:
 |---|---|
 | `/` | Página provisória |
 | `/dashboard` | Estrutura + aviso "em construção" |
+| `/design-system` | Catálogo interno do Design System (404 em produção) |
 | `/dashboard/{conversas, agendamentos, pacientes, conhecimento, relatorios, integracoes, configuracoes}` | Reservadas (aviso "em construção") |
 
 As seções do painel são definidas em `src/config/navigation.ts`. Ao implementar uma seção, crie a

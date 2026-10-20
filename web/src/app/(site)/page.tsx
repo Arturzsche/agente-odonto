@@ -1,16 +1,17 @@
-import Link from "next/link";
+import { ButtonLink } from "@/components/ui/button";
+import { Logo } from "@/components/ui/logo";
 import { siteConfig } from "@/config/site";
 
 /** Ponto de entrada provisório. A landing page é construída numa etapa posterior. */
 export default function HomePage() {
   return (
-    <main className="mx-auto flex min-h-dvh max-w-xl flex-col justify-center px-6 py-16">
-      <p className="text-xs font-medium uppercase tracking-widest text-neutral-500">Em construção</p>
-      <h1 className="mt-3 text-3xl font-semibold">{siteConfig.name}</h1>
-      <p className="mt-3 text-neutral-600">{siteConfig.description}</p>
-      <Link href="/dashboard" className="mt-8 text-sm font-medium underline underline-offset-4">
-        Ir para o painel (estrutura)
-      </Link>
+    <main className="container-page flex min-h-dvh flex-col justify-center py-16">
+      <Logo size="lg" />
+      <p className="eyebrow mt-10 text-muted">Em construção</p>
+      <p className="mt-3 max-w-prose text-lead text-muted">{siteConfig.description}</p>
+      <ButtonLink href="/dashboard" variant="secondary" className="mt-8 self-start">
+        Ver a estrutura do painel
+      </ButtonLink>
     </main>
   );
 }

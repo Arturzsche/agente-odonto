@@ -1,18 +1,192 @@
 @import "tailwindcss";
 
 /*
- * Estilos globais mínimos. Os tokens de design (cores, tipografia, espaçamentos)
- * serão definidos na etapa de identidade visual, num bloco @theme neste arquivo.
+ * OdontoAgent — tokens do Design System.
+ * Fonte única de cores, tipografia, raios, sombras e movimento.
+ * Componentes usam APENAS estes tokens (ex.: bg-brand, text-ink, rounded-lg, shadow-sm).
+ * Documentação e pares de contraste: docs/design-system.md.
  */
+@theme {
+  /* ------------------------------------------------------------ Cores */
+  --color-*: initial; /* paleta fechada: só os tokens abaixo existem */
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-white: #ffffff;
+
+  /* Marca */
+  --color-navy: #102a43; /* autoridade: títulos, superfícies escuras */
+  --color-navy-strong: #0b1f33; /* hover/fundo escuro mais profundo */
+  --color-navy-soft: #243f5c; /* bordas e divisórias sobre navy */
+  --color-on-navy: #a7b6c8; /* texto secundário sobre navy (7,1:1) */
+  --color-brand: #1d4ed8; /* azul principal: ação e interação */
+  --color-brand-strong: #1e40af; /* hover/pressionado */
+  --color-brand-ring: #bfd3fb; /* contornos sobre superfícies azuis */
+  --color-brand-light: #93b4f5; /* acento sobre navy (7,0:1) */
+  --color-brand-soft: #eff6ff; /* superfície azul suave */
+
+  /* Neutros */
+  --color-ink: #172b3a; /* texto principal */
+  --color-ink-soft: #475569; /* texto secundário sobre superfícies coloridas */
+  --color-muted: #64748b; /* texto secundário sobre branco/fundo (≥ 4,5:1) */
+  --color-faint: #94a3b8; /* ícones e marcadores — nunca texto */
+  --color-line: #e2e8f0; /* bordas */
+  --color-line-strong: #cbd5e1; /* bordas em hover / campos */
+  --color-canvas: #f7f9fc; /* fundo */
+  --color-surface: #ffffff; /* cartões, campos, painéis */
+
+  /* Estados */
+  --color-success: #16856b;
+  --color-success-strong: #0f6b56; /* texto sobre success-soft (5,8:1) */
+  --color-success-soft: #e8f7f1;
+  --color-warning: #b45309;
+  --color-warning-soft: #fef6e7;
+  --color-danger: #b42318;
+  --color-danger-strong: #912018;
+  --color-danger-soft: #fef0ee;
+
+  /* ------------------------------------------------------------ Tipografia */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  /* Escala editorial (site institucional) — fluida */
+  --text-display: clamp(2.5rem, 1.6rem + 3.2vw, 4rem);
+  --text-display--line-height: 1.05;
+  --text-display--letter-spacing: -0.03em;
+  --text-headline: clamp(2rem, 1.55rem + 1.6vw, 2.75rem);
+  --text-headline--line-height: 1.12;
+  --text-headline--letter-spacing: -0.025em;
+  --text-title: clamp(1.25rem, 1.12rem + 0.45vw, 1.5rem);
+  --text-title--line-height: 1.3;
+  --text-title--letter-spacing: -0.015em;
+  --text-lead: 1.125rem;
+  --text-lead--line-height: 1.7;
+
+  /* Escala de interface (painel e componentes) */
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1rem;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.375rem;
+  --text-base: 1rem;
+  --text-base--line-height: 1.625rem;
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl: 1.25rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 2rem;
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* ------------------------------------------------------------ Espaço e layout */
+  --spacing: 0.25rem; /* escala de 4 px: p-2 = 8 px, p-6 = 24 px */
+  --container-prose: 42rem; /* textos longos */
+  --container-content: 75rem; /* conteúdo institucional (1200 px) */
+  --container-app: 90rem; /* área do painel */
+
+  /* Breakpoints (padrão Tailwind, documentados aqui) */
+  --breakpoint-sm: 40rem; /* 640 */
+  --breakpoint-md: 48rem; /* 768 */
+  --breakpoint-lg: 64rem; /* 1024 */
+  --breakpoint-xl: 80rem; /* 1280 */
+  --breakpoint-2xl: 96rem; /* 1536 */
+
+  /* ------------------------------------------------------------ Raios */
+  --radius-xs: 0.25rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem; /* botões, campos */
+  --radius-lg: 0.75rem; /* cartões */
+  --radius-xl: 1rem; /* painéis, modais */
+  --radius-2xl: 1.25rem; /* molduras de produto */
+  --radius-full: 9999px;
+
+  /* ------------------------------------------------------------ Sombras (tingidas de navy, leves) */
+  --shadow-xs: 0 1px 2px rgba(16, 42, 67, 0.05);
+  --shadow-sm: 0 1px 3px rgba(16, 42, 67, 0.06), 0 1px 2px rgba(16, 42, 67, 0.04);
+  --shadow-md: 0 8px 32px rgba(16, 42, 67, 0.06), 0 1px 3px rgba(16, 42, 67, 0.05);
+  --shadow-lg: 0 20px 48px -12px rgba(16, 42, 67, 0.18), 0 2px 6px rgba(16, 42, 67, 0.05);
+
+  /* ------------------------------------------------------------ Movimento */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --animate-enter: enter 180ms var(--ease-standard) both;
+  --animate-pulse-dot: pulse-dot 1.2s ease-in-out infinite;
+
+  @keyframes enter {
+    from {
+      opacity: 0;
+      transform: translateY(4px) scale(0.99);
+    }
+  }
+  @keyframes pulse-dot {
+    0%,
+    100% {
+      opacity: 0.3;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+}
+
+/* Contêiner de página com gutters responsivos (16 / 24 / 32 px) */
+@utility container-page {
+  width: 100%;
+  max-width: var(--container-content);
+  margin-inline: auto;
+  padding-inline: 1rem;
+  @media (width >= 40rem) {
+    padding-inline: 1.5rem;
+  }
+  @media (width >= 64rem) {
+    padding-inline: 2rem;
+  }
+}
+
+/* Rótulo editorial em caixa alta */
+@utility eyebrow {
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Algarismos de largura fixa para números e horários */
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Anel de foco padrão (teclado) */
+@utility focus-ring {
+  outline: 2px solid transparent;
+  &:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+}
 
 @layer base {
-  body {
-    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  html {
+    color: var(--color-ink);
+    background: var(--color-surface);
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01";
+  }
+
+  ::selection {
+    background: var(--color-brand-soft);
+    color: var(--color-navy);
   }
 
   :focus-visible {
-    outline: 2px solid currentColor;
+    outline: 2px solid var(--color-brand);
     outline-offset: 2px;
   }
 
@@ -21,6 +195,7 @@
     *::before,
     *::after {
       animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
     }
