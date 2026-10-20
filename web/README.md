@@ -1,36 +1,71 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# OdontoAgent — Web
 
-## Getting Started
+Site institucional e painel administrativo do OdontoAgent.
 
-First, run the development server:
+> Este é o front-end. O agente de WhatsApp (backend Node.js/Express) fica na raiz do repositório
+> e é um projeto separado, com o seu próprio `package.json`.
+
+## Stack
+
+- [Next.js 16](https://nextjs.org) (App Router) + React 19
+- TypeScript (modo estrito)
+- Tailwind CSS v4
+- ESLint (configuração `eslint-config-next`)
+
+Requer Node.js 20.9 ou superior.
+
+## Como executar
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+| Script | O que faz |
+|---|---|
+| `npm run dev` | Servidor de desenvolvimento |
+| `npm run build` | Build de produção |
+| `npm start` | Serve o build de produção |
+| `npm run lint` | ESLint |
+| `npm run typecheck` | Gera os tipos de rotas (`next typegen`) e roda o TypeScript |
+| `npm run check` | typecheck + lint + build (validação completa) |
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Variáveis de ambiente: veja `.env.example` (copie para `.env.local`).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Estrutura
 
-## Learn More
+```
+src/
+  app/                       # Rotas e layouts (App Router)
+    (site)/page.tsx          # "/" — site institucional (landing page: etapa futura)
+    dashboard/
+      layout.tsx             # Estrutura do painel
+      page.tsx               # /dashboard — visão geral
+      [secao]/page.tsx       # Seções ainda não implementadas (aviso "em construção")
+    not-found.tsx
+    layout.tsx, globals.css  # Layout raiz e estilos globais
+  components/
+    shared/                  # Componentes usados pelo site e pelo painel
+    dashboard/               # Componentes do painel
+  config/                    # Configuração do produto (nome, mapa de rotas)
+  lib/                       # Utilitários (ex.: leitura de variáveis de ambiente)
+  types/                     # Tipos e interfaces compartilhados
+```
 
-To learn more about Next.js, take a look at the following resources:
+Pastas previstas, criadas quando houver conteúdo real:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `src/components/ui/` — componentes base do sistema de design (etapa de identidade visual)
+- `src/components/site/` — seções da landing page
+- `src/services/` — acesso a dados (fonte demonstrativa isolada e, depois, a API real do agente)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Rotas
 
-## Deploy on Vercel
+| Rota | Estado |
+|---|---|
+| `/` | Página provisória |
+| `/dashboard` | Estrutura + aviso "em construção" |
+| `/dashboard/{conversas, agendamentos, pacientes, conhecimento, relatorios, integracoes, configuracoes}` | Reservadas (aviso "em construção") |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+As seções do painel são definidas em `src/config/navigation.ts`. Ao implementar uma seção, crie a
+pasta estática correspondente (ex.: `src/app/dashboard/conversas/page.tsx`); ela tem prioridade
+sobre a rota dinâmica `[secao]`.

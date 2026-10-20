@@ -1,8 +1,8 @@
-import { PageHeader } from "@/components/dashboard/page-header";
-import { getDataSource } from "@/services/data";
+import { UnderConstruction } from "@/components/shared/under-construction";
+import { dashboardOverview } from "@/config/navigation";
 
-/** ESBOÇO — implementado na Fase 4. */
-export default async function Page() {
-  const ds = await getDataSource();
-  return <PageHeader title="Visão geral" source={ds.kind} />;
+export const metadata = { title: dashboardOverview.label };
+
+export default function DashboardPage() {
+  return <UnderConstruction title={dashboardOverview.label} description={dashboardOverview.description} />;
 }
