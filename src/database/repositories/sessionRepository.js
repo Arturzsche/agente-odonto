@@ -29,4 +29,18 @@ async function getOrCreateActiveSession(userId, now = new Date()) {
   });
 }
 
-module.exports = { getOrCreateActiveSession };
+/**
+ * Sessão ativa e ainda dentro do prazo (SESSION_TIMEOUT_HOURS) do paciente, sem criar nem
+ * encerrar nada. Retorna null se não houver (a próxima mensagem abriria um novo atendimento).
+ */
+async function findOpenSession(remoteJid, now = new Date()) {
+  const timeoutMs = config.db.sessionTimeoutHours * 60 * 60 * 1000;
+  const session = await prisma.chatSession.findFirst({
+    where: { status: 'ACTIVE', user: { remoteJid } },
+    orderBy: { lastMessageAt: 'desc' },
+  });
+  if (!session || now.getTime() - session.lastMessageAt.getTime() > timeoutMs) return null;
+  return session;
+}
+
+module.exports = { getOrCreateActiveSession, findOpenSession };

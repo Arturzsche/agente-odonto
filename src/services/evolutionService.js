@@ -1,6 +1,7 @@
 const axios = require('axios');
 const config = require('../config');
 const logger = require('../utils/logger');
+const sentMessages = require('./sentMessageRegistry');
 
 const { baseUrl, apiKey, instance } = config.evolution;
 const simulationMode = !baseUrl;
@@ -45,18 +46,26 @@ async function downloadMedia(data) {
   };
 }
 
-/** Envia uma mensagem de texto: POST /message/sendText/{instance}. */
+/**
+ * Envia uma mensagem de texto: POST /message/sendText/{instance}.
+ * Registra o texto e o ID enviados (sentMessageRegistry) para que o eco "fromMe" desta mensagem,
+ * que a Evolution também entrega pelo webhook, não seja confundido com a equipe assumindo a conversa.
+ */
 async function sendText(number, text) {
   if (simulationMode) {
     logger.info(`[evolution][SIMULAÇÃO] -> ${number}: ${text}`);
     return { simulated: true };
   }
 
+  // Antes do envio: o eco pode chegar pelo webhook antes de esta requisição retornar.
+  sentMessages.registerSentText(number, text);
   const { data } = await http.post(`/message/sendText/${instance}`, {
     number,
     text,
     delay: 1200, // mostra "digitando..." por ~1s, deixa a conversa mais humana
   });
+  // Assim que a Evolution devolve o ID, e antes de qualquer gravação no banco.
+  sentMessages.registerSentMessageId(data?.key?.id);
   logger.info(`[evolution] Mensagem enviada para ${number}`);
   return data;
 }

@@ -1,4 +1,5 @@
 const appointmentService = require('../services/appointmentService');
+const handoffService = require('../services/handoffService');
 
 /** Definições enviadas à OpenAI no parâmetro `tools`. */
 const toolDefinitions = [
@@ -51,6 +52,35 @@ const toolDefinitions = [
       parameters: { type: 'object', properties: {}, additionalProperties: false },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'encaminhar_para_equipe',
+      description:
+        'Sinaliza a equipe humana da clínica para continuar o atendimento desta conversa. Use em ' +
+        'relatos de urgência (dor forte, inchaço, sangramento, dente quebrado, trauma, febre), dúvidas ' +
+        'que não estão nas informações disponíveis, pedido para falar com uma pessoa ou reclamações. ' +
+        'Depois, avise o paciente com naturalidade, sem prometer prazo.',
+      parameters: {
+        type: 'object',
+        properties: {
+          motivo: {
+            type: 'string',
+            description:
+              'Resumo curto e objetivo do motivo (ex.: "Dor forte e rosto inchado desde ontem", "Pergunta se aceita convênio Amil").',
+          },
+          prioridade: {
+            type: 'string',
+            enum: ['alta', 'normal'],
+            description:
+              '"alta" para urgências (dor forte, inchaço, sangramento, dente quebrado, trauma, febre); "normal" nos demais casos.',
+          },
+        },
+        required: ['motivo'],
+        additionalProperties: false,
+      },
+    },
+  },
 ];
 
 /** Implementações locais de cada tool. `ctx` traz dados da conversa (ex.: remoteJid). */
@@ -61,6 +91,8 @@ const handlers = {
   agendar_consulta: (args, ctx) => appointmentService.agendarConsulta(args, ctx),
 
   consultar_valor_avaliacao: () => '150.00',
+
+  encaminhar_para_equipe: (args, ctx) => handoffService.encaminharParaEquipe(args, ctx),
 };
 
 /** Executa uma tool com segurança: qualquer erro vira um JSON que a IA consegue interpretar. */

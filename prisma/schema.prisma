@@ -48,28 +48,59 @@ enum SessionStatus {
   @@map("session_status")
 }
 
+/// Encaminhamento para a equipe humana.
+/// NONE: o agente conduz. REQUESTED: a IA sinalizou a equipe (o agente continua respondendo).
+/// HUMAN_ACTIVE: a equipe assumiu e o agente fica pausado até `humanActiveUntil`.
+enum HandoffStatus {
+  NONE
+  REQUESTED
+  HUMAN_ACTIVE
+
+  @@map("handoff_status")
+}
+
+enum SessionPriority {
+  NORMAL
+  HIGH
+
+  @@map("session_priority")
+}
+
 /// Um "atendimento": agrupa as mensagens de uma conversa. Depois de um período sem mensagens
 /// (SESSION_TIMEOUT_HOURS) a sessão é encerrada e a próxima mensagem abre uma nova, para a IA
 /// não misturar o contexto de atendimentos de dias diferentes.
 model ChatSession {
-  id            String        @id @default(uuid()) @db.Uuid
-  userId        String        @map("user_id") @db.Uuid
-  status        SessionStatus @default(ACTIVE)
-  startedAt     DateTime      @default(now()) @map("started_at") @db.Timestamptz(3)
-  lastMessageAt DateTime      @default(now()) @map("last_message_at") @db.Timestamptz(3)
-  endedAt       DateTime?     @map("ended_at") @db.Timestamptz(3)
+  id                 String          @id @default(uuid()) @db.Uuid
+  userId             String          @map("user_id") @db.Uuid
+  status             SessionStatus   @default(ACTIVE)
+  startedAt          DateTime        @default(now()) @map("started_at") @db.Timestamptz(3)
+  lastMessageAt      DateTime        @default(now()) @map("last_message_at") @db.Timestamptz(3)
+  endedAt            DateTime?       @map("ended_at") @db.Timestamptz(3)
+  /// Situação do encaminhamento para a equipe (ver HandoffStatus).
+  handoffStatus      HandoffStatus   @default(NONE) @map("handoff_status")
+  /// HIGH para urgências (relato de dor forte, inchaço etc. ou agendamento de emergência).
+  priority           SessionPriority @default(NORMAL)
+  /// Motivo informado pela IA ao encaminhar (resumo curto, exibido no painel).
+  handoffReason      String?         @map("handoff_reason")
+  /// Quando a equipe foi sinalizada (início do encaminhamento atual).
+  handoffRequestedAt DateTime?       @map("handoff_requested_at") @db.Timestamptz(3)
+  /// Até quando o agente fica pausado depois que a equipe assumiu (HUMAN_TAKEOVER_HOURS).
+  humanActiveUntil   DateTime?       @map("human_active_until") @db.Timestamptz(3)
 
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  messages      Message[]
-  appointments  Appointment[]
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages     Message[]
+  appointments Appointment[]
 
   @@index([userId, status])
+  @@index([handoffStatus])
   @@map("chat_sessions")
 }
 
 enum MessageRole {
   USER
   ASSISTANT
+  /// Pessoa da equipe da clínica (pelo WhatsApp da clínica ou pelo painel).
+  STAFF
 
   @@map("message_role")
 }
@@ -81,7 +112,8 @@ enum MessageType {
   @@map("message_type")
 }
 
-/// Mensagem trocada na conversa (do paciente ou da IA). Para áudios, `content` guarda a transcrição.
+/// Mensagem trocada na conversa (do paciente, da IA ou da equipe). Para áudios do paciente, `content`
+/// guarda a transcrição; para mídias da equipe, um marcador como "[áudio enviado pela equipe]".
 model Message {
   id         String      @id @default(uuid()) @db.Uuid
   sessionId  String      @map("session_id") @db.Uuid

@@ -20,9 +20,12 @@ scripts/migrar-sqlite-para-postgres.js  # importa o histórico do SQLite antigo
   prompts/systemPrompt.js        # personalidade e regras da recepcionista (edite aqui o tom)
   services/openaiService.js      # ciclo de function calling (com proteção contra "um momento"), Whisper
   services/evolutionService.js   # download de mídia e envio de texto (ou simulação)
+  services/handoffService.js     # ferramenta encaminhar_para_equipe
+  services/sentMessageRegistry.js  # IDs/textos enviados pelo sistema (separa eco do agente x equipe)
   services/calendarService.js    # MOCK + implementação real do Google Calendar
   tools/index.js                 # definições das tools e despacho para os handlers
 scripts/simular-webhook.js       # simula a Evolution localmente
+test/                            # testes automatizados (npm test) com OpenAI/Evolution falsas
 scripts/conectar-whatsapp.js     # cria a instância e mostra o QR Code
 docker-compose.yml               # Evolution API + PostgreSQL + Redis
 ```
@@ -69,10 +72,55 @@ PHONE=5511988887777 node scripts/simular-webhook.js "Oi"   # outro paciente
 | `DATABASE_URL` | **sim** | `postgresql://evolution:SENHA@localhost:5432/agente_odonto?schema=public` (SENHA = `EVOLUTION_DB_PASSWORD`) |
 | `HISTORY_LIMIT` | não (10) | Mensagens de contexto (da sessão atual) enviadas à IA |
 | `SESSION_TIMEOUT_HOURS` | não (12) | Horas sem mensagens até a conversa virar um novo atendimento |
+| `HUMAN_TAKEOVER_HOURS` | não (12) | Horas que o agente fica pausado numa conversa depois que a equipe responde por ela (renovado a cada mensagem da equipe) |
+| `FROM_ME_PROCESS_DELAY_MS` | não (4000) | Espera antes de analisar uma mensagem enviada pelo número da clínica (ver "Encaminhamento para a equipe") |
 | `GOOGLE_CALENDAR_ENABLED` | não (`false`) | `true` usa o Google real; `false` usa o mock |
 | `GOOGLE_CALENDAR_ID` | se real | ID da agenda (ex.: `xxx@group.calendar.google.com`) |
 | `GOOGLE_APPLICATION_CREDENTIALS` | se real | JSON da Service Account |
 | `CLINIC_TIMEZONE`, `CLINIC_OPEN_HOUR`, `CLINIC_CLOSE_HOUR`, `APPOINTMENT_DURATION_MIN` | não | Expediente e duração da avaliação |
+
+## Encaminhamento para a equipe
+
+> Depois de atualizar o código, rode **`npm run db:migrate`** (migração `encaminhamento_equipe`).
+> Sem ela o servidor não inicia e avisa que o banco está desatualizado.
+
+- **A IA sinaliza a equipe** com a ferramenta `encaminhar_para_equipe` (motivo + prioridade `alta`/`normal`)
+  em relatos de dor forte, inchaço, sangramento, dente quebrado, trauma ou febre (prioridade alta), dúvidas que
+  ela não sabe responder (convênios, endereço, pagamento, serviços não listados), pedido para falar com uma
+  pessoa e reclamações. A conversa fica `REQUESTED` (com motivo, horário e prioridade) e o agente **continua
+  respondendo** até alguém da equipe assumir. Agendamentos de emergência também deixam a conversa com prioridade alta.
+- **A equipe assume respondendo pelo próprio WhatsApp da clínica** (celular ou WhatsApp Web): a mensagem chega
+  no webhook como `fromMe`, é gravada como mensagem da equipe (`STAFF`; mídias viram um marcador como
+  `[áudio enviado pela equipe]`) e a conversa vira `HUMAN_ACTIVE`: o agente fica **pausado** nela por
+  `HUMAN_TAKEOVER_HOURS` (padrão 12 h, renovado a cada mensagem da equipe). Nesse período as mensagens do
+  paciente são só registradas (nenhuma resposta automática, nem de erro). Vencido o prazo, ou num atendimento
+  novo (`SESSION_TIMEOUT_HOURS`), o agente volta a responder. A IA vê as mensagens da equipe no histórico
+  com o prefixo `[Equipe]`.
+- **Como o agente separa o próprio eco da equipe**: a Evolution também entrega pelo webhook as mensagens que o
+  agente enviou. Uma `fromMe` é considerada do sistema se (1) o ID dela foi devolvido por um envio do agente
+  (registro em memória, preenchido assim que o `sendText` retorna), (2) o ID já está gravado no banco, ou
+  (3) o texto é idêntico a uma mensagem enviada pelo agente ao mesmo número nos últimos 2 minutos. Como o eco
+  pode chegar antes de o envio retornar, a análise espera `FROM_ME_PROCESS_DELAY_MS` (padrão 4000 ms) e a
+  resposta do agente em andamento para aquela conversa.
+- **Limitações da heurística**: o registro em memória some ao reiniciar o servidor (as respostas da IA continuam
+  cobertas pelo banco); uma mensagem da equipe com texto **idêntico** ao que o agente acabou de enviar ao mesmo
+  número não é reconhecida como da equipe; edições, reações e mensagens apagadas pela equipe não contam como
+  assumir a conversa; se a equipe responder enquanto a IA ainda está gerando uma resposta, essa resposta ainda
+  é enviada (a pausa vale a partir da mensagem seguinte).
+- Outras partes do sistema que enviarem mensagens pelo WhatsApp sem passar pelo `evolutionService.sendText`
+  (ex.: a API administrativa) devem chamar `registerSentMessageId(id)` de `src/services/sentMessageRegistry.js`
+  logo após o envio, antes de gravar no banco.
+
+## Testes automatizados
+
+```bash
+npm test   # Node 22+; usa um PostgreSQL de teste
+```
+
+Cada arquivo de teste cria um banco descartável `agente_odonto_teste_*` (via `prisma migrate deploy`) no mesmo
+servidor do `DATABASE_URL` do `.env` (ou de `TEST_DATABASE_URL`, se definida) e o apaga no fim; o banco
+`agente_odonto` nunca é tocado. OpenAI e Evolution são servidores falsos locais: nada é enviado de verdade.
+`TEST_VERBOSE=1` mostra os logs do app; `KEEP_TEST_DB=1` mantém o banco de teste para inspeção.
 
 ## Conectando na Evolution API real (Docker)
 

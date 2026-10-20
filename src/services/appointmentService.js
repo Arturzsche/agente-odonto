@@ -1,6 +1,6 @@
 const config = require('../config');
 const logger = require('../utils/logger');
-const { prisma, appointments } = require('../database');
+const { prisma, appointments, markSessionHighPriority } = require('../database');
 const calendarService = require('./calendarService');
 
 const durationMs = () => config.calendar.durationMin * 60 * 1000;
@@ -51,7 +51,7 @@ async function agendarConsulta(args, ctx) {
     return { sucesso: false, erro: 'Esse horário já passou. Ofereça um horário futuro.' };
   }
 
-  return prisma.$transaction(
+  const result = await prisma.$transaction(
     async (tx) => {
       // Lock liberado automaticamente no fim da transação; a chave é o horário de início.
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'agendamento:' + start.toISOString()}))`;
@@ -95,6 +95,15 @@ async function agendarConsulta(args, ctx) {
     // A criação do evento no Google pode levar alguns segundos.
     { timeout: 20_000, maxWait: 10_000 },
   );
+
+  // Agendamento de emergência: a conversa também ganha prioridade alta no painel da equipe.
+  // Fora da transação e sem afetar a resposta: a consulta já está marcada.
+  if (result.sucesso && result.emergencia && ctx.sessionId) {
+    await markSessionHighPriority(ctx.sessionId).catch((err) =>
+      logger.warn(`[agenda] Falha ao marcar prioridade alta na sessão ${ctx.sessionId}: ${err.message}`),
+    );
+  }
+  return result;
 }
 
 module.exports = { consultarDisponibilidade, agendarConsulta };
