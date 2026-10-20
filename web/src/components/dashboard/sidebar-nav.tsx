@@ -16,14 +16,14 @@ const icons: Record<string, LucideIcon> = {
   "/dashboard/configuracoes": Settings,
 };
 
-/** Navegação lateral do painel. */
-export function SidebarNav() {
+/** Navegação lateral do painel. `onNavigate` fecha a gaveta no celular. */
+export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <nav aria-label="Navegação do painel">
       <ul className="space-y-0.5">
         {dashboardNav.map((item) => (
           <li key={item.href}>
-            <NavLink href={item.href} icon={icons[item.href]} match={item.href === "/dashboard" ? "exact" : "prefix"}>
+            <NavLink href={item.href} icon={icons[item.href]} match={item.href === "/dashboard" ? "exact" : "prefix"} onClick={onNavigate}>
               {item.label}
             </NavLink>
           </li>

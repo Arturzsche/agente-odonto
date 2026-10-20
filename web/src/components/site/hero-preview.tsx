@@ -79,7 +79,7 @@ export function HeroPreview() {
           </ol>
 
           {/* Resumo do atendimento */}
-          <aside aria-label="Resumo do atendimento" className="hidden border-l border-line p-4 sm:block">
+          <div aria-label="Resumo do atendimento" className="hidden border-l border-line p-4 sm:block">
             <p className="eyebrow text-muted">Resumo</p>
             <dl className="mt-3 space-y-3">
               {summary.map(([term, value]) => (
@@ -97,7 +97,7 @@ export function HeroPreview() {
                 </dd>
               </div>
             </dl>
-          </aside>
+          </div>
         </div>
 
         {/* Campo de resposta (inerte, apenas visual) */}

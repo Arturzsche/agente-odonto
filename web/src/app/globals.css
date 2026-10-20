@@ -44,6 +44,13 @@
   --color-danger-strong: #912018;
   --color-danger-soft: #fef0ee;
 
+  /* Gráficos — paleta categórica validada (ordem fixa, nunca reciclada).
+     chart-3 e chart-4 ficam abaixo de 3:1 sobre branco: sempre com legenda com valores e tabela. */
+  --color-chart-1: #2a78d6;
+  --color-chart-2: #eb6834;
+  --color-chart-3: #1baf7a;
+  --color-chart-4: #eda100;
+
   /* ------------------------------------------------------------ Tipografia */
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;

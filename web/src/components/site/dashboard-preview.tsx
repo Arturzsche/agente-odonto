@@ -106,7 +106,7 @@ function AppWindow() {
     <div className="overflow-hidden rounded-2xl border border-line bg-surface shadow-lg">
       <div className="flex">
         {/* Navegação lateral */}
-        <aside className="hidden w-56 shrink-0 border-r border-line p-3 lg:block">
+        <div className="hidden w-56 shrink-0 border-r border-line p-3 lg:block">
           <div className="flex h-9 items-center px-2">
             <Logo size="sm" />
           </div>
@@ -122,7 +122,7 @@ function AppWindow() {
               </li>
             ))}
           </ul>
-        </aside>
+        </div>
 
         <div className="min-w-0 flex-1 bg-canvas">
           {/* Cabeçalho */}

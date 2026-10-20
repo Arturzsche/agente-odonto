@@ -41,37 +41,49 @@ O simulador de conversa da landing page (`src/components/site/chat-simulator/`) 
 
 ```
 src/
-  app/                       # Rotas e layouts (App Router)
-    (site)/page.tsx          # "/" — site institucional (landing page: etapa futura)
-    dashboard/
-      layout.tsx             # Estrutura do painel
-      page.tsx               # /dashboard — visão geral
-      [secao]/page.tsx       # Seções ainda não implementadas (aviso "em construção")
-    not-found.tsx
-    layout.tsx, globals.css  # Layout raiz e estilos globais
+  app/                         # Rotas e layouts (App Router)
+    (site)/                    # Site institucional: landing, contato, sobre, termos, privacidade
+    api/demonstracao/          # POST do formulário de demonstração
+    dashboard/                 # Painel administrativo (uma pasta por tela)
+      layout.tsx               # Sidebar, cabeçalho, busca e perfil
+      loading.tsx, error.tsx   # Estados de carregamento e erro de todas as telas
+    layout.tsx, globals.css    # Layout raiz e estilos globais
   components/
-    ui/                      # Design System (ver docs/design-system.md)
-    shared/                  # Componentes usados pelo site e pelo painel
-    dashboard/               # Componentes do painel
-  config/                    # Configuração do produto (nome, mapa de rotas)
-  lib/                       # Utilitários (ex.: leitura de variáveis de ambiente)
-  types/                     # Tipos e interfaces compartilhados
+    ui/                        # Design System (ver docs/design-system.md)
+    site/                      # Seções do site
+    dashboard/                 # Estrutura e telas do painel (gráficos em charts.tsx)
+  services/dashboard/          # Dados do painel: index.ts (acesso), demo-data.ts (fonte fictícia)
+  config/                      # Configuração do produto (nome, mapa de rotas)
+  lib/                         # Utilitários (datas, texto, ambiente)
 ```
-
-Pastas previstas, criadas quando houver conteúdo real:
-
-- `src/components/site/` — seções da landing page
-- `src/services/` — acesso a dados (fonte demonstrativa isolada e, depois, a API real do agente)
 
 ### Rotas
 
-| Rota | Estado |
+| Rota | Conteúdo |
 |---|---|
-| `/` | Página provisória |
-| `/dashboard` | Estrutura + aviso "em construção" |
+| `/` | Landing page com simulador de conversa |
+| `/contato` | Formulário de pedido de demonstração |
+| `/dashboard` | Visão geral: indicadores, conversas por dia, status, próximos agendamentos |
+| `/dashboard/conversas` | Lista, busca, filtros, mensagens e encaminhamento para a equipe |
+| `/dashboard/agendamentos` | Lista com filtros por data, profissional e status; calendário mensal |
+| `/dashboard/pacientes` | Listagem com busca, filtro, ordenação e paginação |
+| `/dashboard/conhecimento` | Cadastro, consulta, edição e exclusão de informações administrativas |
+| `/dashboard/relatorios` | Gráficos por período, com legendas, tabelas e exportação CSV |
+| `/dashboard/integracoes` | Status real das integrações (verificado no servidor) |
+| `/dashboard/configuracoes` | Preferências da clínica, comportamento do agente e usuários |
 | `/design-system` | Catálogo interno do Design System (404 em produção) |
-| `/dashboard/{conversas, agendamentos, pacientes, conhecimento, relatorios, integracoes, configuracoes}` | Reservadas (aviso "em construção") |
 
-As seções do painel são definidas em `src/config/navigation.ts`. Ao implementar uma seção, crie a
-pasta estática correspondente (ex.: `src/app/dashboard/conversas/page.tsx`); ela tem prioridade
-sobre a rota dinâmica `[secao]`.
+### Dados do painel
+
+O painel **ainda não está conectado ao agente**. As telas leem `src/services/dashboard/index.ts`, que hoje
+usa a fonte demonstrativa `demo-data.ts`: pacientes, conversas, agenda e números **fictícios**, gerados de
+forma determinística a partir da data atual (fuso `America/Sao_Paulo`). Toda tela traz esse aviso.
+
+Limitações atuais:
+
+- Mudanças feitas no painel (status de conversa, base de conhecimento) valem só enquanto a página está aberta.
+- Não é possível responder pacientes, salvar preferências ou convidar usuários (não há login nem API do agente).
+- Integrações mostram o status real deste servidor: as do agente aparecem como "Não configurada" até existir a conexão.
+
+Para conectar ao agente, reimplemente as funções de `src/services/dashboard/index.ts` sobre a API dele,
+mantendo os tipos de `types.ts`.

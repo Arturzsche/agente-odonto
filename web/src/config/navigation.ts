@@ -1,9 +1,6 @@
 import type { NavItem } from "@/types/navigation";
 
-/**
- * Mapa de rotas do produto. As páginas ainda não implementadas exibem um aviso
- * de "em construção"; este arquivo é a referência de quais rotas existem.
- */
+/** Mapa de rotas do painel: referência para a navegação lateral e a busca global. */
 
 export const dashboardOverview: NavItem = {
   href: "/dashboard",
@@ -11,7 +8,7 @@ export const dashboardOverview: NavItem = {
   description: "Resumo da operação de atendimento.",
 };
 
-/** Seções do painel, servidas por /dashboard/[secao]. A chave é o segmento da URL. */
+/** Seções do painel (cada uma em app/dashboard/<chave>/). A chave é o segmento da URL. */
 export const dashboardSections = {
   conversas: { href: "/dashboard/conversas", label: "Conversas", description: "Central de atendimento e histórico de conversas." },
   agendamentos: { href: "/dashboard/agendamentos", label: "Agendamentos", description: "Consultas marcadas, filtros e agenda." },
