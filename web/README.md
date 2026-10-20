@@ -32,6 +32,11 @@ npm run dev        # http://localhost:3000
 
 Variáveis de ambiente: veja `.env.example` (copie para `.env.local`).
 
+- `NEXT_PUBLIC_CONTACT_EMAIL` — e-mail comercial público (opcional).
+- `DEMO_REQUEST_WEBHOOK_URL` — **somente servidor**. Endereço HTTPS que recebe os pedidos do formulário de demonstração (`/contato`) via `POST /api/demonstracao`. Sem ela, o formulário avisa que o envio não está configurado e nada é enviado.
+
+O simulador de conversa da landing page (`src/components/site/chat-simulator/`) roda inteiro no navegador, com roteiros e dados fictícios — não chama nenhuma API.
+
 ## Estrutura
 
 ```

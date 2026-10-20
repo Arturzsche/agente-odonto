@@ -23,7 +23,7 @@ export const sectionIds = {
 } as const;
 
 /** Destino de todos os CTAs "Agendar demonstração". */
-export const demoRequestHref = "/contato";
+export const demoRequestHref = "/contato#formulario";
 
 export const siteNav = [
   { label: "Recursos", href: `/#${sectionIds.recursos}` },

@@ -14,7 +14,7 @@ export function DocumentPage({ eyebrow, title, intro, draft = false, children }:
             Este documento ainda não passou por revisão jurídica e não representa uma política aprovada.
           </Alert>
         )}
-        <div className="mt-10 space-y-8 text-ink [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:text-navy [&_li]:mt-1.5 [&_p]:mt-3 [&_p]:leading-relaxed [&_p]:text-ink-soft [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:text-ink-soft">
+        <div className="mt-10 space-y-8 text-ink [&>*>h2]:text-xl [&>*>h2]:font-semibold [&>*>h2]:text-navy [&>*>p]:mt-3 [&>*>p]:leading-relaxed [&>*>p]:text-ink-soft [&>*>ul]:mt-3 [&>*>ul]:list-disc [&>*>ul]:pl-5 [&>*>ul]:text-ink-soft [&>*>ul>li]:mt-1.5 [&>*>p_a]:font-medium [&>*>p_a]:text-brand [&>*>p_a]:underline [&>*>p_a]:underline-offset-4">
           {children}
         </div>
       </div>
