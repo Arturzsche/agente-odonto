@@ -1,17 +1,34 @@
-import { ButtonLink } from "@/components/ui/button";
-import { Logo } from "@/components/ui/logo";
+import type { Metadata } from "next";
+import { Benefits } from "@/components/site/benefits";
+import { DashboardPreview } from "@/components/site/dashboard-preview";
+import { DemoSection } from "@/components/site/demo-section";
+import { Faq } from "@/components/site/faq";
+import { FinalCta } from "@/components/site/final-cta";
+import { Hero } from "@/components/site/hero";
+import { HowItWorks } from "@/components/site/how-it-works";
+import { Pricing } from "@/components/site/pricing";
+import { Problem } from "@/components/site/problem";
+import { Security } from "@/components/site/security";
 import { siteConfig } from "@/config/site";
 
-/** Ponto de entrada provisório. A landing page é construída numa etapa posterior. */
+export const metadata: Metadata = {
+  title: { absolute: `${siteConfig.name} · Atendimento inteligente para clínicas odontológicas` },
+  description: siteConfig.description,
+};
+
 export default function HomePage() {
   return (
-    <main className="container-page flex min-h-dvh flex-col justify-center py-16">
-      <Logo size="lg" />
-      <p className="eyebrow mt-10 text-muted">Em construção</p>
-      <p className="mt-3 max-w-prose text-lead text-muted">{siteConfig.description}</p>
-      <ButtonLink href="/dashboard" variant="secondary" className="mt-8 self-start">
-        Ver a estrutura do painel
-      </ButtonLink>
-    </main>
+    <>
+      <Hero />
+      <Problem />
+      <HowItWorks />
+      <DemoSection />
+      <DashboardPreview />
+      <Benefits />
+      <Security />
+      <Pricing />
+      <Faq />
+      <FinalCta />
+    </>
   );
 }

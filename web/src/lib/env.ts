@@ -14,3 +14,9 @@ export function getSiteUrl(): URL {
     return new URL(DEFAULT_SITE_URL);
   }
 }
+
+/** E-mail comercial público, se configurado e com formato válido. */
+export function getContactEmail(): string | null {
+  const raw = process.env.NEXT_PUBLIC_CONTACT_EMAIL?.trim();
+  return raw && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw) ? raw : null;
+}
