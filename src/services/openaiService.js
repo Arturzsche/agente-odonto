@@ -3,7 +3,7 @@ const config = require('../config');
 const logger = require('../utils/logger');
 const { toolDefinitions, executeTool } = require('../tools');
 const { todayInClinicTz } = require('./calendarService');
-const { SYSTEM_PROMPT, buildContextPrompt } = require('../prompts/systemPrompt');
+const { SYSTEM_PROMPT, buildContextPrompt, buildHandoffPrompt } = require('../prompts/systemPrompt');
 
 let client;
 /** Cria o cliente só no primeiro uso: sem chave, o servidor sobe e o erro cai no try/catch. */
@@ -36,7 +36,24 @@ const STALL_CORRECTION =
   'ficaria esperando sem retorno. Não envie mensagens de espera: chame agora a ferramenta ' +
   'necessária e depois responda com a informação completa.';
 
-function buildMessages(history) {
+const HANDOFF_TOOL = 'encaminhar_para_equipe';
+
+// Promessa de retorno da equipe ("vou confirmar com a equipe", "a equipe vai te responder").
+// Se a IA prometer isso sem chamar encaminhar_para_equipe, ninguém da equipe seria avisado e o
+// paciente ficaria esperando: nesse caso a equipe é sinalizada automaticamente (rede de segurança).
+const TEAM_FOLLOWUP_PATTERN = new RegExp(
+  [
+    String.raw`\b(vou|vamos|irei)\s+(confirmar|verificar|checar|consultar|ver|perguntar|passar|repassar|encaminhar|sinalizar|avisar)\b[^.!?\n]{0,40}\b(equipe|recepção)`,
+    String.raw`\b(equipe|recepção)\b[^.!?\n]{0,60}\b(vai|vão|irá|irão)\s+(te\s+|lhe\s+)?(retornar|responder|entrar em contato|continuar|falar|chamar|ligar|dar (um )?retorno)`,
+  ].join('|'),
+  'i',
+);
+const promisesTeamFollowUp = (text) => TEAM_FOLLOWUP_PATTERN.test(text || '');
+
+// Mensagens da equipe entram no histórico como "[Equipe] ..."; a IA não deve imitar o prefixo.
+const STAFF_PREFIX_PATTERN = /^\s*\[equipe\]\s*/i;
+
+function buildMessages(history, ctx = {}) {
   const weekday = new Intl.DateTimeFormat('pt-BR', {
     weekday: 'long',
     timeZone: config.calendar.timezone,
@@ -54,6 +71,7 @@ function buildMessages(history) {
         closeHour: config.calendar.closeHour,
       }),
     },
+    ...[buildHandoffPrompt(ctx)].filter(Boolean).map((content) => ({ role: 'system', content })),
     ...history,
   ];
 }
@@ -63,13 +81,15 @@ function buildMessages(history) {
  * Todas as ferramentas são aguardadas aqui dentro; o retorno é SEMPRE o texto final, pronto
  * para enviar ao paciente numa única mensagem.
  * @param {Array<{role: string, content: string}>} history histórico (já inclui a mensagem nova do usuário)
- * @param {{ remoteJid: string, phone: string, userId?: string, sessionId?: string }} ctx
+ * @param {{ remoteJid: string, phone: string, userId?: string, sessionId?: string,
+ *           handoffStatus?: string }} ctx
  * @returns {Promise<string>}
  */
 async function generateReply(history, ctx) {
-  const messages = buildMessages(history);
+  const messages = buildMessages(history, ctx);
   let stallCorrections = 0;
   let toolsCalled = false;
+  const calledTools = new Set();
 
   for (let round = 0; round < MAX_ROUNDS; round += 1) {
     // Na correção de uma resposta de espera, obriga a IA a usar uma ferramenta de consulta.
@@ -93,6 +113,7 @@ async function generateReply(history, ctx) {
       const results = await Promise.all(
         reply.tool_calls.map(async (call) => {
           const { name, arguments: args } = call.function;
+          calledTools.add(name);
           logger.info(`[openai] Tool chamada: ${name} ${args}`);
           const result = await executeTool(name, args, ctx);
           logger.info(`[openai] Resultado de ${name}: ${result}`);
@@ -104,7 +125,7 @@ async function generateReply(history, ctx) {
       continue;
     }
 
-    const text = (reply.content || '').trim();
+    const text = (reply.content || '').replace(STAFF_PREFIX_PATTERN, '').trim();
 
     // Resposta de espera sem ferramenta: corrige uma vez em vez de deixar a conversa travada.
     if (isStall(text) && stallCorrections === 0) {
@@ -113,6 +134,21 @@ async function generateReply(history, ctx) {
       messages.push({ role: 'assistant', content: text });
       messages.push({ role: 'system', content: STALL_CORRECTION });
       continue;
+    }
+
+    if (
+      ctx?.sessionId &&
+      !calledTools.has(HANDOFF_TOOL) &&
+      !['REQUESTED', 'HUMAN_ACTIVE'].includes(ctx.handoffStatus) &&
+      promisesTeamFollowUp(text)
+    ) {
+      logger.warn('[openai] Resposta promete retorno da equipe sem encaminhar_para_equipe: sinalizando a equipe.');
+      const result = await executeTool(
+        HANDOFF_TOOL,
+        JSON.stringify({ motivo: 'A assistente prometeu ao paciente um retorno da equipe', prioridade: 'normal' }),
+        ctx,
+      );
+      logger.info(`[openai] Resultado de ${HANDOFF_TOOL} (automático): ${result}`);
     }
 
     return text;
@@ -138,4 +174,4 @@ async function transcribeAudio(audioBuffer, mimetype = 'audio/ogg') {
   return (transcription.text || '').trim();
 }
 
-module.exports = { generateReply, transcribeAudio, SYSTEM_PROMPT, isStall };
+module.exports = { generateReply, transcribeAudio, SYSTEM_PROMPT, isStall, promisesTeamFollowUp };

@@ -1,7 +1,11 @@
 # API administrativa do agente (contrato)
 
-Consumida **apenas servidor-a-servidor** pelo painel web (`web/`, Next.js). Nunca exposta ao navegador.
-Os formatos de resposta são **exatamente** os tipos de `web/src/types/domain.ts` (mesmos nomes de campos e valores).
+Feita para ser consumida **apenas servidor-a-servidor** pelo painel web (`web/`, Next.js). Nunca exposta ao navegador.
+
+> Situação atual: o painel em `web/` **ainda não consome esta API** — ele usa dados demonstrativos
+> (`web/src/services/dashboard/`). Para conectar, reimplemente as funções de
+> `web/src/services/dashboard/index.ts` sobre estas rotas, adaptando os formatos abaixo aos tipos de
+> `web/src/services/dashboard/types.ts`. Testes: `test/admin.test.js`.
 
 ## Autenticação e convenções
 
@@ -18,7 +22,7 @@ Os formatos de resposta são **exatamente** os tipos de `web/src/types/domain.ts
 
 ## Mapeamentos de domínio
 
-| Backend (Prisma) | Painel (`domain.ts`) |
+| Backend (Prisma) | Resposta da API |
 |---|---|
 | `ChatSession.status = CLOSED`, ou `ACTIVE` sem mensagens há mais de `SESSION_TIMEOUT_HOURS` | `status: "encerrada"` |
 | `handoffStatus = HUMAN_ACTIVE` e `humanActiveUntil > agora` | `"em_atendimento_humano"` |

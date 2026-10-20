@@ -8,4 +8,8 @@ const isUniqueViolation = (err) =>
 const isMissingTable = (err) =>
   err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2021';
 
-module.exports = { isUniqueViolation, isMissingTable };
+/** True quando uma coluna não existe (migração nova ainda não aplicada). */
+const isMissingColumn = (err) =>
+  err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2022';
+
+module.exports = { isUniqueViolation, isMissingTable, isMissingColumn };

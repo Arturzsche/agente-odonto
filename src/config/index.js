@@ -5,6 +5,12 @@ const toInt = (value, fallback) => {
   return Number.isNaN(n) ? fallback : n;
 };
 
+/** Número positivo (aceita frações, ex.: "0.5"); qualquer outro valor usa o padrão. */
+const toPositiveNumber = (value, fallback) => {
+  const n = Number(value);
+  return value !== undefined && value !== '' && Number.isFinite(n) && n > 0 ? n : fallback;
+};
+
 const config = {
   port: toInt(process.env.PORT, 3000),
 
@@ -27,6 +33,29 @@ const config = {
     historyLimit: toInt(process.env.HISTORY_LIMIT, 10),
     // Sem mensagens por este período, a conversa vira um novo atendimento (contexto limpo).
     sessionTimeoutHours: toInt(process.env.SESSION_TIMEOUT_HOURS, 12),
+  },
+
+  handoff: {
+    // Depois que a equipe responde pelo WhatsApp da clínica (ou assume pelo painel), o agente
+    // fica pausado nessa conversa por este período, renovado a cada nova mensagem da equipe.
+    humanTakeoverHours: toPositiveNumber(process.env.HUMAN_TAKEOVER_HOURS, 12),
+    // Espera antes de analisar uma mensagem "fromMe": dá tempo de o sendText do próprio agente
+    // retornar o ID da mensagem (o eco pode chegar pelo webhook antes disso).
+    fromMeProcessDelayMs: Math.max(0, toInt(process.env.FROM_ME_PROCESS_DELAY_MS, 4000)),
+  },
+
+  admin: {
+    // Token da API administrativa (/api/admin), usada só pelo painel web (servidor-a-servidor).
+    // Vazio ou com menos de 32 caracteres => API desativada (todas as rotas respondem 503).
+    token: (process.env.ADMIN_API_TOKEN || '').trim(),
+  },
+
+  clinic: {
+    // Dados exibidos no painel (GET /api/admin/settings).
+    name: (process.env.CLINIC_NAME || '').trim() || 'Minha clínica',
+    address: (process.env.CLINIC_ADDRESS || '').trim() || null,
+    // Expediente de sábado, ex.: "08:00-12:00". Vazio = fechado aos sábados.
+    saturdayHours: (process.env.CLINIC_SATURDAY_HOURS || '').trim(),
   },
 
   calendar: {
